@@ -1,9 +1,12 @@
 package com.sparta.springauth.Service;
 
+import com.sparta.springauth.Dto.LoginRequestDto;
 import com.sparta.springauth.Dto.SignupRequestDto;
 import com.sparta.springauth.Entity.User;
 import com.sparta.springauth.Entity.UserRoleEnum;
+import com.sparta.springauth.Jwt.JwtUtil;
 import com.sparta.springauth.Repository.UserRepository;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -16,6 +19,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
     // ADMIN_TOKEN(사용자, 관리자 구분)
     // 현업에서는 관리자 페이지를 따로 생성하거나 승인자에 의해 결재하는 과정으로 구현됨
@@ -54,5 +58,25 @@ public class UserService {
         // 일반 사용자 등록
         User user = new User(username, password, email, role);
         userRepository.save(user);
+    }
+
+    public void login(LoginRequestDto requestDto, HttpServletResponse res) {
+        String username = requestDto.getUsername();
+        String password = requestDto.getPassword();
+
+        // 사용자 확인
+        User user = userRepository.findByUsername(username).orElseThrow(
+                () -> new IllegalArgumentException("등록된 사용자가 없습니다.")
+        );
+
+        // 비밀번호 확인
+        // passwordEncoder.matches(평문(입력받은 값), encoding된 password)
+        if(!passwordEncoder.matches(password, user.getPassword())){
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
+
+        // JWT 생성 및 쿠키에 저장 후 Response 객체에 추가
+        String token = jwtUtil.createToken(user.getUsername(), user.getRole());
+        jwtUtil.addJwtToCookie(token, res);
     }
 }
