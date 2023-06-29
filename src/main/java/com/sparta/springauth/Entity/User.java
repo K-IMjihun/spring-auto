@@ -26,7 +26,8 @@ public class User {
     private String email;
 
     @Column(nullable = false)
-    //
+    
+    //사용자의 권한
     @Enumerated(value = EnumType.STRING)
     private UserRoleEnum role;
 
